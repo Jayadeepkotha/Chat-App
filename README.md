@@ -91,12 +91,10 @@ npm run dev
 
 ## 🧪 Testing The App
 1.  **Onboarding**: Open `http://localhost:3000`. Allow camera access.
-2.  **Profile**: After AI verification, set a Nickname (e.g., "SkyWalker").
+2.  **Profile**: After AI verification, set a Nickname (e.g., "SkyWalker"). 
+      **(Note:Please wait until Fastapi get's active it takes 10 seconds time else Verification will Fail)**
 3.  **Dashboard**: You will see "Find Female", "Find Male", "Find Any" buttons.
 4.  **Match**: Click "Find Any". Open a **second tab** (Incognito) and do the same to match with yourself.
 5.  **Ban Test**: In the chat, click the **Red X** to report. After 10 reports, the user gets banned.
 
----
 
-## 📜 License
-This project is open-source and available under the **MIT License**.
