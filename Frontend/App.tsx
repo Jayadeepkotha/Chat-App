@@ -143,16 +143,21 @@ const App: React.FC = () => {
         }
         console.log("Joined Room:", data.roomId);
         setRoomId(data.roomId);
-        // Save partner info to state (we use a ref or temp state, but actually ChatView needs it)
-        // Let's modify setPendingPartner or just use a state variable
         setPartnerProfile(data.partner);
         setView(AppView.CHAT);
+      });
+
+      // 3. Listen for queue errors (e.g. Banned)
+      socketService.onQueueError((msg) => {
+        alert("❌ " + msg); // "You are banned for X hours"
+        setView(AppView.DASHBOARD);
       });
     }
 
     // Cleanup listeners when leaving matching screen
     return () => {
       socketService.offMatch();
+      socketService.offQueueError();
     };
   }, [view, matchFilter]);
 

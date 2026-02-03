@@ -30,6 +30,15 @@ export async function checkBanStatus(deviceId: string): Promise<{ isBanned: bool
             isBanned: true,
             remainingMs: user.bannedUntil.getTime() - now.getTime()
         };
+    } else {
+        // Ban has EXPIRED. Give them a fresh start.
+        // If we don't do this, reports stay at 11, and next report = instant ban.
+        if (user.reports > 0) {
+            console.log(`[BanSystem] User ${deviceId} served ban. Resetting reports to 0.`);
+            user.reports = 0;
+            user.bannedUntil = undefined; // Clear the date
+            await user.save();
+        }
     }
 
     return { isBanned: false, remainingMs: 0 };
@@ -40,11 +49,13 @@ export async function checkBanStatus(deviceId: string): Promise<{ isBanned: bool
  * If reports > 10, Bans for 24 hours.
  */
 export async function reportUser(targetDeviceId: string) {
+    console.log(`[UserService] Incrementing reports for ${targetDeviceId}...`);
     const user = await User.findOneAndUpdate(
         { deviceId: targetDeviceId },
         { $inc: { reports: 1 } },
         { new: true, upsert: true }
     );
+    console.log(`[UserService] New report count for ${targetDeviceId}: ${user.reports}`);
 
     if (user.reports > 10) {
         // Ban logic

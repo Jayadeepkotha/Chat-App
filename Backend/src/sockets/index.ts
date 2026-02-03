@@ -1,7 +1,7 @@
 import { io } from "../server";
 import { authenticateSocketDevice } from "./middleware/deviceAuth";
 import { handleEnterQueue } from "./handlers/queue.handlers";
-import { handleChatMessage, handleChatLeave } from "./handlers/chat.handlers";
+import { handleChatMessage, handleChatLeave, handleChatReport } from "./handlers/chat.handlers";
 
 io.use(authenticateSocketDevice);
 
@@ -28,6 +28,10 @@ io.on("connection", (socket) => {
 
   socket.on("chat:leave", (payload) => {
     handleChatLeave(socket, payload);
+  });
+
+  socket.on("chat:report", (payload) => {
+    handleChatReport(socket, payload);
   });
 
   socket.on("disconnect", () => {

@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 // import { io } from "../../server"; // Removed to fix circular dependency
 import { findMatch } from "../../services/match.service";
 import { dequeueUser } from "../../services/queue.service";
+import redisClient from "../../config/redis";
 
 export async function tryMatch(socket: Socket) {
   const deviceId = socket.data.deviceId;
@@ -51,8 +52,10 @@ export async function tryMatch(socket: Socket) {
   if (socketB) socketB.join(roomId);
 
   // notify both users
-  // notify both users
   // We need to send User B's info to User A, and User A's info to User B
+
+  // PERSIST MATCH for Reporting (TTL 1 hour)
+  await redisClient.set(`match:${roomId}`, JSON.stringify({ userA, userB }), { EX: 3600 });
 
   const profileA = {
     nickname: socketA?.data.nickname || "Anonymous",

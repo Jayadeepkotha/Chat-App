@@ -58,6 +58,10 @@ class SocketService {
         this.socket?.on('chat:ended', callback);
     }
 
+    onQueueError(callback: (msg: string) => void) {
+        this.socket?.on('queue:error', callback);
+    }
+
     onMessage(callback: (data: { text: string; senderId: string; timestamp: number }) => void) {
         this.socket?.on('chat:message', callback);
     }
@@ -72,6 +76,10 @@ class SocketService {
 
     offChatEnded() {
         this.socket?.off('chat:ended');
+    }
+
+    offQueueError() {
+        this.socket?.off('queue:error');
     }
 }
 
