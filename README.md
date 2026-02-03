@@ -1,68 +1,102 @@
-# FlowChat (Klymo Chat)
+# 🦅 FlowChat (Klymo)
+> **Controlled Anonymity, Intelligent Matching, and True Privacy.**
 
-A privacy-focused, anonymous chat application with gender verification and real-time messaging.
+**FlowChat** is a privacy-first web application designed to solve the "Chat Roulette" problem. It balances anonymity with safety using AI verification, intent-based matching, and device fingerprinting—without requiring any personal information (PII).
 
-## Project Structure
+---
 
-The repository is divided into three main components:
+## 🚀 Key Features
 
-1.  **Frontend**: React application (Vite).
-2.  **Backend**: Node.js/Express server with Socket.IO for chat.
-3.  **Fastapi**: Python/FastAPI service for video/image gender verification.
+### 1. 🛡️ User Privacy & Safety
+*   **No PII Required**: No email, phone number, or social login.
+*   **Device Fingerprinting**: Identity is tied to a browser's unique signature (`crypto.randomUUID`), enforcing "Controlled Anonymity".
+*   **Ban System**: Users receiving **>10 reports** are automatically banned for **24 hours**.
 
-## Technology Stack
+### 2. 🤖 Hybrid AI Gender Verification
+*   **Primary Strategy**: Deep Learning via Python FastAPI (`rizvandwiki/gender-classification` model).
+*   **Fallback Strategy**: Client-side Computer Vision (`face-api.js`) if the Python server is unreachable.
+*   **Zero Retention**: Images are processed in RAM and **deleted immediately** after verification. No photos are ever stored in a database.
 
-### Frontend (`/Frontend`)
--   **Framework**: React (Vite)
--   **Language**: TypeScript
--   **Key Libraries**: `face-api.js` (Client-side AI), `@google/genai`
--   **Configuration**: Defaults to Port 3000 (See Known Issues)
+### 3. 🎯 Intent-Based Matchmaking
+*   **Reciprocal Matching**: Solves the "Mismatched Intent" problem. male
+    *   *Male seeking Female* will ONLY match with *Female seeking Male* (or Any).
+*   **Instant Queue**: Powered by **Redis Sorted Sets** for O(1) matching speed.
+*   **Fairness Limits**: Freemium model limits specific gender filters (**5 matches/day**) while keeping "Any" matches unlimited.
 
-### Backend (`/Backend`)
--   **Framework**: Express.js
--   **Language**: TypeScript
--   **Real-time**: Socket.IO
--   **Database**: Redis (and Mongoose/MongoDB code is present)
--   **Configuration**: Defaults to Port 3000
+### 4. 💬 Ephemeral Chat (Socket.io)
+*   **No Chat History**: Messages are relayed in-memory and cleared from the client upon disconnection.
+*   **Graceful Exit**: If a partner leaves, the UI handles it instantly (5s countdown intro "Next Match").
+*   **Real Identities**: Once matched, profiles (Nickname + Bio) are revealed to humanize the anonymous interaction.
 
-### Verification Service (`/Fastapi`)
--   **Framework**: FastAPI
--   **Language**: Python
--   **AI Models**: Transformers (`rizvandwiki/gender-classification`), OpenCV, PIL
--   **Configuration**: Defaults to Port 8000
--   **Endpoints**:
-    -   `POST /verify`: Accepts image/video, returns verification result.
+---
 
-## Architecture & Flow (Inferred)
+## 🛠️ Tech Stack & Architecture
 
-1.  **User Interface**: Users interact with the React Frontend.
-2.  **Verification**: The frontend attempts to verify gender via `face-api.js` (client-side) or by sending a request to the backend.
-    -   *Note*: Current code points to `localhost:3000/api/verify`, but the Verification Service is on port 8000.
-3.  **Chat**: Once verified/onboarded, users connect to the Node.js backend via Socket.IO for matchmaking and chatting.
+| Component | Technology | Role | Port |
+| :--- | :--- | :--- | :--- |
+| **Frontend** | React (Vite) + TypeScript | UI, Camera, Socket Client | `3000` |
+| **Backend** | Node.js (Express) | Socket.IO Server, Business Logic | `5000` |
+| **AI Service** | Python (FastAPI) | Gender Classification Model | `8000` |
+| **Database** | MongoDB | User persistence (Reports, Bans) | `27017` |
+| **Cache** | Redis | Instant Queues & Rate Limits | `6379` |
 
-## Known Issues
+### System Flow
+```mermaid
+graph LR
+    User -->|Webcam| AI_Service[AI Verify]
+    User -->|Connect| Backend
+    Backend -->|Auth| Redis[(Redis Queue)]
+    Backend -->|Persist| Mongo[(MongoDB)]
+    Redis -->|Match Found| Backend
+    Backend -->|Socket| Partner
+```
 
--   **Port Conflict**: Both the Frontend (`vite.config.ts`) and Backend (`server.ts`) are configured to use Port **3000**. This will cause a startup failure if both are run simultaneously.
--   **API Endpoint Mismatch**: `Frontend/services/verificationService.ts` sends requests to `http://localhost:3000/api/verify`. However, the Python Verification Service runs on port **8000** (`/verify`). The Node Backend (port 3000) does not appear to have an `/api/verify` route (it has an onboarding route at `/`).
+---
 
-## Setup Instructions (Draft)
+## ⚡ Quick Start
 
-1.  **FastAPI**:
-    ```bash
-    cd Fastapi
-    pip install -r requirements.txt
-    python main.py
-    ```
-2.  **Backend**:
-    ```bash
-    cd Backend
-    npm install
-    # Fix port in .env or server.ts to avoid 3000 if running frontend
-    npm run dev
-    ```
-3.  **Frontend**:
-    ```bash
-    cd Frontend
-    npm install
-    npm run dev
-    ```
+### Prerequisites
+*   Node.js (v18+)
+*   Python (v3.10+)
+*   Redis (Running on 6379)
+*   MongoDB (Running on 27017)
+
+### 1. Start AI Service (Python)
+```bash
+cd Fastapi
+pip install -r requirements.txt
+python main.py
+# Runs on Port 8000
+```
+
+### 2. Start Backend (Node.js)
+```bash
+cd Backend
+npm install
+# Linux/Mac
+PORT=5000 npm run dev
+# Windows (Powershell)
+$env:PORT=5000; npm run dev
+```
+
+### 3. Start Frontend (React)
+```bash
+cd Frontend
+npm install
+npm run dev
+# Runs on http://localhost:3000
+```
+
+---
+
+## 🧪 Testing The App
+1.  **Onboarding**: Open `http://localhost:3000`. Allow camera access.
+2.  **Profile**: After AI verification, set a Nickname (e.g., "SkyWalker").
+3.  **Dashboard**: You will see "Find Female", "Find Male", "Find Any" buttons.
+4.  **Match**: Click "Find Any". Open a **second tab** (Incognito) and do the same to match with yourself.
+5.  **Ban Test**: In the chat, click the **Red X** to report. After 10 reports, the user gets banned.
+
+---
+
+## 📜 License
+This project is open-source and available under the **MIT License**.
