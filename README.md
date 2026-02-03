@@ -50,7 +50,11 @@ graph LR
     Redis -->|Match Found| Backend
     Backend -->|Socket| Partner
 ```
+## Architecture Diagram
 
+<p align="center">
+  <img src="architecture_diagram.png" alt="Flow Chat Architecture" width="900">
+</p>
 ---
 
 ## ⚡ Quick Start
