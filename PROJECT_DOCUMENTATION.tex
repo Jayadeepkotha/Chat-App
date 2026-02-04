@@ -1,0 +1,147 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{titling}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{float}
+
+% Formatting
+\geometry{a4paper, margin=1in}
+\setlength{\droptitle}{-4em}
+
+% Code Style
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+% Title Stats
+\title{\textbf{Flow Chat: Project Documentation}\\ \Large Backend Enforcement, Safety Systems \& Hybrid AI}
+\author{
+    \textbf{Group Name: Development Group} \\
+    \\
+    \textbf{Team Members:} \\
+    A Vishweshwar Reddy \\
+    K Jayadeep \\
+    Danush Reddy
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    Flow Chat is a privacy-first, anonymous chat application designed to solve the \textit{"Chat Roulette"} problem through intelligent engineering. Unlike traditional platforms that rely on user registration data, Flow Chat employs \textbf{Controlled Anonymity} using device fingerprinting, \textbf{Hybrid AI Verification} for gender safety, and a robust \textbf{Redis-MongoDB} backend for enforcing limits and bans. This document details the technical architecture, security measures, and the "fresh start" reporting logic implemented for the global release.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+The primary objective of Flow Chat is to create a safe, abuse-resistant anonymous chat platform without collecting Personally Identifiable Information (PII). This requires moving critical enforcement logic from the client-side to a secure server-side environment. This release introduces advanced features such as "Hit-and-Run" protection, persistent reporting history, and a fail-safe AI verification pipeline.
+
+\section{System Architecture}
+The system leverages a microservices-inspired architecture:
+\begin{itemize}
+    \item \textbf{Frontend}: React (Vite) + TypeScript for a responsive, real-time UI.
+    \item \textbf{Backend API}: Node.js (Express) handling business logic and Socket.IO signaling.
+    \item \textbf{AI Service}: Python (FastAPI) utilizing Hugging Face Vision Transformers.
+    \item \textbf{Data Systems}:
+    \begin{itemize}
+        \item \textbf{Redis}: High-speed in-memory store for Match Queues, Rate Limits, and Active Session tracking.
+        \item \textbf{MongoDB}: Persistent storage for User Reputation (Reports, Ban Status, Last Online).
+    \end{itemize}
+\end{itemize}
+
+\section{Feature 1: Backend Specific Match Limits}
+To ensure fairness in the "Freemium" model, users are limited in how many specific-gender searches they can perform daily.
+
+\subsection{Security Implementation}
+Limits are no longer trusted to the client (LocalStorage). Secure enforcement occurs on the backend:
+\begin{itemize}
+    \item \textbf{Key Structure}: \texttt{limit:\{deviceId\}:\{date\}}
+    \item \textbf{Policy}: 5 specific matches (e.g., "Find Female") per 24 hours.
+    \item \textbf{Unlimited "Any"}: Random matching remains unlimited to encourage diverse connections.
+\end{itemize}
+
+\subsection{Mechanism}
+When a user requests to join a specific queue:
+\begin{enumerate}
+    \item Backend checks \texttt{redisClient.get(limitKey)}.
+    \item If count $<$ 5, entry is allowed.
+    \item Upon successful match, \texttt{redisClient.incr(limitKey)} is executed.
+\end{enumerate}
+
+\section{Feature 2: Advanced User Safety (The Ban System)}
+A robust reporting system is critical for anonymity. Flow Chat introduces two novel protections against abuse.
+
+\subsection{Protection A: "Hit-and-Run" Prevention}
+A common exploit in chat apps is the "Hit-and-Run": an abuser sends a toxic message and immediately disconnects before the victim can click "Report."
+\textbf{Solution: Persistent Match History}
+\begin{itemize}
+    \item When a match is formed, the pair \texttt{\{UserA, UserB\}} is stored in Redis with a 1-hour TTL.
+    \item If a user reports a disconnected partner, the backend retrieves the ID from Redis history instead of the active socket list.
+    \item \textit{Result: Abusers can be banned even after they have left the chat.}
+\end{itemize}
+
+\subsection{Protection B: "Fresh Start" Logic}
+The ban system handles punishment and rehabilitation automatically via MongoDB.
+\begin{itemize}
+    \item \textbf{Threshold}: $>10$ reports triggers an automatic 24-hour ban.
+    \item \textbf{Exclusion}: Banned users are rejected from the queue with a realtime countdown message.
+    \item \textbf{Rehabilitation}: When a user returns \textit{after} the ban expires, the \texttt{checkBanStatus} service automatically resets their report count to 0. This prevents "infinite loops" where a single new report would re-trigger a ban.
+\end{itemize}
+
+\section{Feature 3: Resilient Hybrid Verification}
+Flow Chat prioritizes availability through a dual-strategy verification pipeline.
+
+\subsection{Layer 1: Server-Side Vision Transformer}
+The primary path uses a dedicated Python FastAPI microservice running the \textbf{rizvandwiki/gender-classification} model (84M parameters).
+\begin{itemize}
+    \item \textbf{Input}: Webcam frame (Blob).
+    \item \textbf{Privacy}: Images are processed in RAM and deleted immediately via `os.unlink`.
+\end{itemize}
+
+\subsection{Layer 2: Client-Side Fallback}
+If the Python service is unreachable (e.g., 500 Error or Timeout), the frontend seamlessly switches to \textbf{face-api.js} running in the browser. This ensures:
+\begin{enumerate}
+    \item Zero downtime for users.
+    \item Continued protection even during server maintenance.
+\end{enumerate}
+
+\section{Security \& Anonymity}
+The system relies on \textbf{Device Fingerprinting} (FingerprintJS) + \textbf{crypto.randomUUID} rather than traditional logins.
+\begin{itemize}
+    \item \textbf{Immutable Identity}: Tracks distinct devices to prevent ban evasion via Incognito mode.
+    \item \textbf{Zero PII}: No email, phone, or social data is ever requested or stored.
+\end{itemize}
+
+\section{Conclusion}
+The Flow Chat Backend Update delivers a production-grade safety infrastructure. By combining Redis speed for matching with MongoDB persistence for reputation, and adding intelligent logic for "Hit-and-Run" and "Fresh Start" scenarios, the platform ensures a safe, fair, and continuously available experience for all users.
+
+\end{document}

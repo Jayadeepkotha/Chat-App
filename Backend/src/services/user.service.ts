@@ -5,11 +5,12 @@ import User, { IUser } from "../models/User";
  */
 export async function touchUser(deviceId: string): Promise<IUser> {
     try {
-        return await User.findOneAndUpdate(
+        const user = await User.findOneAndUpdate(
             { deviceId },
             { lastOnline: new Date() },
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
+        return user as IUser;
     } catch (err) {
         console.error("Mongo Error (touchUser):", err);
         throw err;
@@ -36,7 +37,7 @@ export async function checkBanStatus(deviceId: string): Promise<{ isBanned: bool
         if (user.reports > 0) {
             console.log(`[BanSystem] User ${deviceId} served ban. Resetting reports to 0.`);
             user.reports = 0;
-            user.bannedUntil = undefined; // Clear the date
+            user.bannedUntil = null; // Clear the date
             await user.save();
         }
     }
